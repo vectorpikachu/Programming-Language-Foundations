@@ -1287,7 +1287,14 @@ Proof.
       apply trans_cequiv with c2; try assumption.
       apply if_false; assumption.
   - (* while *)
-    (* FILL IN HERE *) Admitted.
+    assert (bequiv b (fold_constants_bexp b)). {
+      apply fold_constants_bexp_sound. }
+    destruct (fold_constants_bexp b) eqn:Heqb;
+      try (apply CWhile_congruence; assumption).
+    + (* b=true *) apply while_true. assumption.
+    + (* b=false *) apply while_false. assumption.
+    (* b=<{ a1 = a2 }> ... etc... by congruence*) 
+    (* FILL IN HERE *) Qed.
 (** [] *)
 
 (* ================================================================= *)
@@ -1323,21 +1330,49 @@ Proof.
      optimize_0plus_com
 *)
 
-Fixpoint optimize_0plus_aexp (a : aexp) : aexp
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Fixpoint optimize_0plus_aexp (a : aexp) : aexp :=
+  match a with
+  | ANum n => n
+  | AId x => AId x
+  | <{ 0 + a2 }> => optimize_0plus_aexp a2
+  | <{ a1 + a2 }> => <{ (optimize_0plus_aexp a1) + (optimize_0plus_aexp a2) }>
+  | <{ a1 - a2 }> => <{ (optimize_0plus_aexp a1) - (optimize_0plus_aexp a2) }>
+  | <{ a1 * a2 }> => <{ (optimize_0plus_aexp a1) * (optimize_0plus_aexp a2) }>
+  end.
+  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *)
 
-Fixpoint optimize_0plus_bexp (b : bexp) : bexp
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Fixpoint optimize_0plus_bexp (b : bexp) : bexp :=
+  match b with
+  | <{ true }> => <{ true }>
+  | <{ false }> => <{ false }>
+  | <{ a1 = a2 }> => <{ (optimize_0plus_aexp a1) = (optimize_0plus_aexp a2) }>
+  | <{ a1 <> a2 }> => <{ (optimize_0plus_aexp a1) <> (optimize_0plus_aexp a2) }>
+  | <{ a1 <= a2 }> => <{ (optimize_0plus_aexp a1) <= (optimize_0plus_aexp a2) }>
+  | <{ a1 > a2 }> => <{ (optimize_0plus_aexp a1) > (optimize_0plus_aexp a2) }>
+  | <{ ~ b1 }> => <{ ~ (optimize_0plus_bexp b1) }>
+  | <{ b1 && b2 }> => <{ (optimize_0plus_bexp b1) && (optimize_0plus_bexp b2) }>
+  end.
+  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *)
 
-Fixpoint optimize_0plus_com (c : com) : com
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Fixpoint optimize_0plus_com (c : com) : com :=
+  match c with
+  | <{ skip }> => <{ skip }>
+  | <{ x := a }> => <{ x := (optimize_0plus_aexp a) }>
+  | <{ c1 ; c2 }> => <{ (optimize_0plus_com c1) ; (optimize_0plus_com c2) }>
+  | <{ if b then c1 else c2 end }> =>
+    <{ if (optimize_0plus_bexp b) then (optimize_0plus_com c1) else (optimize_0plus_com c2) end }>
+  | <{ while b do c end }> =>
+    <{ while (optimize_0plus_bexp b) do (optimize_0plus_com c) end }>
+  end.
+  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *)
 
 Example test_optimize_0plus:
     optimize_0plus_com
        <{ while X <> 0 do X := 0 + X - 1 end }>
   =    <{ while X <> 0 do X := X - 1 end }>.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  simpl. reflexivity.
+  (* FILL IN HERE *) Qed.
 
 (** Prove that these three functions are sound, as we did for
     [fold_constants_*].  Make sure you use the congruence lemmas in the
@@ -1346,17 +1381,45 @@ Proof.
 Theorem optimize_0plus_aexp_sound:
   atrans_sound optimize_0plus_aexp.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  unfold atrans_sound. intros a. unfold aequiv. intros st.
+  induction a; simpl; try reflexivity. (* prove ANum and AId *) 
+  - destruct a1; try (destruct n; simpl); try (assumption); 
+    try (simpl; rewrite IHa2; reflexivity);
+    try (rewrite IHa1; rewrite IHa2; reflexivity).  (* APlus with 0 + x and S _ + x *)
+  - (* AMinus *)
+    rewrite IHa1; rewrite IHa2; reflexivity.
+  - (* AMult *)
+    rewrite IHa1; rewrite IHa2; reflexivity.
+  (* FILL IN HERE *) Qed.
 
 Theorem optimize_0plus_bexp_sound :
   btrans_sound optimize_0plus_bexp.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  unfold btrans_sound. intros b. unfold bequiv. intros st.
+  induction b; simpl; try reflexivity (* true and false *);
+  try (rewrite <- optimize_0plus_aexp_sound; 
+    rewrite <- optimize_0plus_aexp_sound; reflexivity) (* = -> > *).
+  - rewrite <- IHb. reflexivity.
+  - rewrite <- IHb1. rewrite <- IHb2. reflexivity.
+  (* FILL IN HERE *) Qed.
 
 Theorem optimize_0plus_com_sound :
   ctrans_sound optimize_0plus_com.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  unfold ctrans_sound. intros c.
+  induction c.
+  - simpl. apply refl_cequiv.
+  - simpl. assert (Haequiv: aequiv a (optimize_0plus_aexp a)).
+    { apply optimize_0plus_aexp_sound. }
+    apply CAsgn_congruence. assumption.
+  - apply CSeq_congruence; assumption.
+  - simpl. assert (Hbequiv: bequiv b (optimize_0plus_bexp b)).
+    { apply optimize_0plus_bexp_sound. }
+    apply CIf_congruence; assumption.
+  - simpl. assert (Hbequiv: bequiv b (optimize_0plus_bexp b)).
+    { apply optimize_0plus_bexp_sound. }
+    apply CWhile_congruence; assumption.
+  (* FILL IN HERE *) Qed.
 
 (** Finally, let's define a compound optimizer on commands that first
     folds constants (using [fold_constants_com]) and then eliminates
@@ -1369,7 +1432,17 @@ Definition optimizer (c : com) := optimize_0plus_com (fold_constants_com c).
 Theorem optimizer_sound :
   ctrans_sound optimizer.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  unfold ctrans_sound. intros c. unfold optimizer.
+  assert (G1: ctrans_sound optimize_0plus_com). { apply optimize_0plus_com_sound. }
+  unfold ctrans_sound in G1.
+  assert (G2: ctrans_sound fold_constants_com). { apply fold_constants_com_sound. }
+  unfold ctrans_sound in G2.
+  assert (G3: cequiv (fold_constants_com c) (optimize_0plus_com (fold_constants_com c))).
+  { apply G1 with (c:= (fold_constants_com c)). }
+  apply trans_cequiv with ((fold_constants_com c)).
+  - apply G2.
+  - apply G3.
+  (* FILL IN HERE *) Qed.
 (** [] *)
 
 (* ################################################################# *)
@@ -1401,6 +1474,8 @@ Proof.
 (** We will see in a moment that it is not, but it is worthwhile
     to pause, now, and see if you can find a counter-example on your
     own. *)
+
+(* X=X+1;Y=Y+X -> X=X+1;Y=Y+X+1 *)
 
 (** More formally, here is the function that substitutes an arithmetic
     expression [u] for each occurrence of a given variable [x] in

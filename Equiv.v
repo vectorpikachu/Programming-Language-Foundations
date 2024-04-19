@@ -1591,7 +1591,11 @@ Lemma aeval_weakening : forall x st a ni,
   var_not_used_in_aexp x a ->
   aeval (x !-> ni ; st) a = aeval st a.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros x st a ni H.
+  induction H; simpl; try (reflexivity); try (apply t_update_neq; assumption);
+  try (rewrite IHvar_not_used_in_aexp1; rewrite IHvar_not_used_in_aexp2;
+    reflexivity).
+  (* FILL IN HERE *) Qed.
 
 (** Using [var_not_used_in_aexp], formalize and prove a correct version
     of [subst_equiv_property]. *)
@@ -1599,6 +1603,21 @@ Proof.
 (* FILL IN HERE
 
     [] *)
+
+Theorem correct_subst_equiv_property : forall x1 x2 a1 a2,
+  var_not_used_in_aexp x1 a1 ->
+  cequiv <{ x1 := a1; x2 := a2 }>
+         <{ x1 := a1; x2 := subst_aexp x1 a1 a2 }>.
+Proof. 
+  intros x1 x2 a1 a2 H.
+  apply CSeq_congruence.
+  - apply refl_cequiv.
+  - apply CAsgn_congruence.
+    unfold aequiv. intros st.
+    assert (G: a2 = subst_aexp x1 a1 a2).
+    {  }
+  Admitted.
+
 
 (** **** Exercise: 3 stars, standard (inequiv_exercise)
 

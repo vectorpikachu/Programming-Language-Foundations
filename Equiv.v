@@ -1604,19 +1604,40 @@ Proof.
 
     [] *)
 
+Lemma subst_aequiv_property : forall st x a1 a2,
+  var_not_used_in_aexp x a1 ->
+  aeval (x !-> (aeval st a1); st) (subst_aexp x a1 a2) =
+  aeval (x !-> (aeval st a1); st) a2.
+Proof.
+  intros. induction a2; simpl.
+  - reflexivity.
+  - destruct ((x =? x0)%string) eqn:He.
+    + Search string. apply String.eqb_eq in He. rewrite <- He.
+      rewrite t_update_eq. apply aeval_weakening. assumption.
+    + reflexivity.
+  - rewrite IHa2_1. rewrite IHa2_2. reflexivity.
+  - rewrite IHa2_1. rewrite IHa2_2. reflexivity.
+  - rewrite IHa2_1. rewrite IHa2_2. reflexivity.
+Qed.
+
 Theorem correct_subst_equiv_property : forall x1 x2 a1 a2,
   var_not_used_in_aexp x1 a1 ->
   cequiv <{ x1 := a1; x2 := a2 }>
          <{ x1 := a1; x2 := subst_aexp x1 a1 a2 }>.
 Proof. 
   intros x1 x2 a1 a2 H.
-  apply CSeq_congruence.
-  - apply refl_cequiv.
-  - apply CAsgn_congruence.
-    unfold aequiv. intros st.
-    assert (G: a2 = subst_aexp x1 a1 a2).
-    {  }
-  Admitted.
+  Search cequiv.
+  unfold cequiv. intros st st'.
+  split.
+  - intros. inversion H0; subst. apply E_Seq with st'0.
+    + assumption.
+    + inversion H3; subst. inversion H6; subst. apply E_Asgn.
+      apply subst_aequiv_property. apply H.
+  - intros. inversion H0; subst. apply E_Seq with st'0.
+    + assumption.
+    + inversion H3; subst. inversion H6; subst. apply E_Asgn.
+      symmetry. apply subst_aequiv_property. apply H.
+  Qed.
 
 
 (** **** Exercise: 3 stars, standard (inequiv_exercise)
@@ -1626,6 +1647,11 @@ Proof.
 Theorem inequiv_exercise:
   ~ cequiv <{ while true do skip end }> <{ skip }>.
 Proof.
+  unfold not. intros Hcontra.
+  unfold cequiv in Hcontra.
+  remember while_true_nonterm as H.
+  unfold not in H.
+  
   (* FILL IN HERE *) Admitted.
 (** [] *)
 

@@ -1649,10 +1649,11 @@ Theorem inequiv_exercise:
 Proof.
   unfold not. intros Hcontra.
   unfold cequiv in Hcontra.
-  remember while_true_nonterm as H.
-  unfold not in H.
-  
-  (* FILL IN HERE *) Admitted.
+  apply (while_true_nonterm <{ true }> <{ skip }> (_ !-> 0) (_ !-> 0)).
+  (* empty state (_ !-> 0) *)
+  - apply refl_bequiv.
+  - apply Hcontra. apply E_Skip.
+  (* FILL IN HERE *) Qed.
 (** [] *)
 
 (* ################################################################# *)
@@ -1769,6 +1770,9 @@ Inductive ceval : com -> state -> state -> Prop :=
       st  =[ c ]=> st' ->
       st' =[ while b do c end ]=> st'' ->
       st  =[ while b do c end ]=> st''
+  | E_Havoc : forall st x n,
+      st =[ havoc x ]=> (x !-> n; st)
+
 (* FILL IN HERE *)
 
   where "st =[ c ]=> st'" := (ceval c st st').
@@ -1778,12 +1782,16 @@ Inductive ceval : com -> state -> state -> Prop :=
 
 Example havoc_example1 : empty_st =[ havoc X ]=> (X !-> 0).
 Proof.
-(* FILL IN HERE *) Admitted.
+  apply E_Havoc.
+(* FILL IN HERE *) Qed.
 
 Example havoc_example2 :
   empty_st =[ skip; havoc Z ]=> (Z !-> 42).
 Proof.
-(* FILL IN HERE *) Admitted.
+  apply E_Seq with empty_st.
+  - apply E_Skip.
+  - apply E_Havoc.
+(* FILL IN HERE *) Qed.
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_Check_rule_for_HAVOC : option (nat*string) := None.
@@ -1813,10 +1821,26 @@ Definition pYX :=
 Theorem pXY_cequiv_pYX :
   cequiv pXY pYX \/ ~cequiv pXY pYX.
 Proof.
+  unfold pXY.
+  unfold pYX.
+  left.
+  split.
+  - intros. inversion H; subst. inversion H2; subst. inversion H5; subst.
+    apply E_Seq with (Y !-> n0; st).
+    + apply E_Havoc.
+    + rewrite t_update_permute.
+      * apply E_Havoc.
+      * discriminate. (* Why disicriminate works??? *)
+  - intros. inversion H; inversion H2; inversion H5; subst.
+    apply E_Seq with (X !-> n0; st).
+    + apply E_Havoc.
+    + rewrite t_update_permute.
+      * apply E_Havoc.
+      * discriminate.
   (* Hint: You may want to use [t_update_permute] at some point,
      in which case you'll probably be left with [X <> Y] as a
      hypothesis. You can use [discriminate] to discharge this. *)
-  (* FILL IN HERE *) Admitted.
+  (* FILL IN HERE *) Qed.
 (** [] *)
 
 (** **** Exercise: 4 stars, standard, optional (havoc_copy)
@@ -1835,7 +1859,16 @@ Definition pcopy :=
 
 Theorem ptwice_cequiv_pcopy :
   cequiv ptwice pcopy \/ ~cequiv ptwice pcopy.
-Proof. (* FILL IN HERE *) Admitted.
+Proof.
+  unfold ptwice.
+  unfold pcopy.
+  left.
+  split.
+  - intros. inversion H; inversion H2; inversion H5; subst.
+    apply E_Seq with (X !-> n; st).
+    + assumption.
+    + 
+ (* FILL IN HERE *) Admitted.
 (** [] *)
 
 (** The definition of program equivalence we are using here has some

@@ -1831,6 +1831,7 @@ Proof.
     + rewrite t_update_permute.
       * apply E_Havoc.
       * discriminate. (* Why disicriminate works??? *)
+  (* X <> Y is natrural because they re different letters. *)
   - intros. inversion H; inversion H2; inversion H5; subst.
     apply E_Seq with (X !-> n0; st).
     + apply E_Havoc.
@@ -1862,13 +1863,20 @@ Theorem ptwice_cequiv_pcopy :
 Proof.
   unfold ptwice.
   unfold pcopy.
-  left.
-  split.
-  - intros. inversion H; inversion H2; inversion H5; subst.
-    apply E_Seq with (X !-> n; st).
-    + assumption.
-    + 
- (* FILL IN HERE *) Admitted.
+  right.
+  unfold not.
+  intros.
+  remember (Y !-> 2; X !-> 1) as st.
+  assert ( G: empty_st =[ havoc X; havoc Y ]=> st ).
+  { rewrite Heqst. apply E_Seq with (X !-> 1); constructor. }
+  assert ( F: empty_st =[ havoc X; Y := X ]=> (Y !-> 1; X !-> 1)).
+  { apply E_Seq with (X !-> 1); constructor. simpl. reflexivity. }
+  assert (E: st X = st Y). {
+    apply H in G. inversion G; subst. inversion H5; subst. simpl.
+    rewrite t_update_eq. apply t_update_neq. unfold not. intros. 
+    discriminate H0. }
+  subst. discriminate E.
+ (* FILL IN HERE *) Qed.
 (** [] *)
 
 (** The definition of program equivalence we are using here has some
@@ -1901,15 +1909,55 @@ Definition p2 : com :=
     either they loop forever, or they terminate in the same state they
     started in.  We can capture the termination behavior of [p1] and
     [p2] individually with these lemmas: *)
+Lemma my_while_true_nonterm : forall b c st st',
+  bequiv b <{true}> ->
+  ~( st =[ while b do c end ]=> st' ).
+Proof.
+  (* WORKED IN CLASS *)
+  intros b c st st' Hb.
+  intros H.
+  remember <{ while b do c end }> as cw eqn:Heqcw.
+  induction H;
+  (* Most rules don't apply; we rule them out by inversion: *)
+  inversion Heqcw; subst; clear Heqcw.
+  (* The two interesting cases are the ones for while loops: *)
+  - (* E_WhileFalse *) (* contradictory -- b is always true! *)
+    unfold bequiv in Hb.
+    (* [rewrite] is able to instantiate the quantifier in [st] *)
+    rewrite Hb in H. discriminate.
+  - (* E_WhileTrue *) (* immediate from the IH *)
+    apply IHceval2. reflexivity.  Qed.
 
 Lemma p1_may_diverge : forall st st', st X <> 0 ->
   ~ st =[ p1 ]=> st'.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. 
+  unfold p1. unfold not. intros.
+  remember <{ while ~ X = 0  do havoc Y; X := X + 1 end }> as G.
+  induction H0; inversion HeqG; subst.
+  - apply H. simpl in H0. rewrite negb_false_iff in H0.
+    apply eqb_eq in H0. assumption.
+  - assert (st' X <> 0). {
+     inversion H0_; subst. unfold not. intros.
+     inversion H6; subst. simpl in H1. rewrite t_update_eq in H1.
+     rewrite add_comm in H1. simpl in H1. discriminate H1. }
+    apply IHceval2 in H1.
+    * apply H1.
+    * reflexivity.
+(* FILL IN HERE *) Qed.
 
 Lemma p2_may_diverge : forall st st', st X <> 0 ->
   ~ st =[ p2 ]=> st'.
 Proof.
-(* FILL IN HERE *) Admitted.
+  unfold p2. unfold not. intros.
+  remember <{ while ~ X = 0 do skip end }> as G.
+  induction H0; inversion HeqG; subst.
+  - apply H. simpl in H0; rewrite negb_false_iff in H0; apply eqb_eq in H0.
+    assumption.
+  - inversion H0_; subst. simpl in H0. rewrite negb_true_iff in H0.
+    apply eqb_neq in H0. apply IHceval2.
+    + apply H0.
+    + reflexivity.
+(* FILL IN HERE *) Qed.
 (** [] *)
 
 (** **** Exercise: 4 stars, advanced (p1_p2_equiv)

@@ -1966,7 +1966,23 @@ Proof.
     equivalent. *)
 
 Theorem p1_p2_equiv : cequiv p1 p2.
-Proof. (* FILL IN HERE *) Admitted.
+Proof.
+  split.
+  - intros H. destruct (st X =? 0) eqn:Heq.
+    + rewrite eqb_eq in Heq. unfold p2. unfold p1 in H.
+      inversion H; subst.
+      * apply E_WhileFalse. assumption.
+      * simpl in H2. rewrite negb_true_iff in H2. rewrite eqb_neq in H2. rewrite Heq in H2.
+        unfold not in H2. assert (G: 0 = 0). { reflexivity. } apply H2 in G. destruct G.
+    + rewrite eqb_neq in Heq. apply (p1_may_diverge st st' Heq) in H. destruct H.
+  - intros H. destruct (st X =? 0) eqn:Heq.
+    + rewrite eqb_eq in Heq. unfold p2 in H. unfold p1.
+      inversion H; subst.
+      * apply E_WhileFalse. assumption.
+      * simpl in H2. rewrite negb_true_iff in H2. rewrite eqb_neq in H2. rewrite Heq in H2.
+        unfold not in H2. assert (G: 0 = 0). { reflexivity. } apply H2 in G. destruct G.
+    + rewrite eqb_neq in Heq. apply (p2_may_diverge st st' Heq) in H. destruct H.
+(* FILL IN HERE *) Qed.
 (** [] *)
 
 (** **** Exercise: 4 stars, advanced (p3_p4_inequiv)
@@ -1987,7 +2003,31 @@ Definition p4 : com :=
      Z := 1 }>.
 
 Theorem p3_p4_inequiv : ~ cequiv p3 p4.
-Proof. (* FILL IN HERE *) Admitted.
+Proof.
+  unfold not.
+  intros.
+  assert (G: (X !-> 1) =[ p3 ]=> (Z !-> 2; X !-> 0; Z !-> 1; X !-> 1)). {
+    unfold p3. apply E_Seq with (Z !-> 1; X !-> 1).
+    - apply E_Asgn. reflexivity.
+    - apply E_WhileTrue with (Z !-> 2; X !-> 0; Z !-> 1; X !-> 1).
+      + simpl. reflexivity.
+      + apply E_Seq with (X !-> 0; Z !-> 1; X !-> 1).
+        * apply E_Havoc. 
+        * apply E_Havoc.
+      + apply E_WhileFalse. simpl. reflexivity. }
+  unfold cequiv in H.
+  apply (H (X !-> 1) (Z !-> 2; X !-> 0; Z !-> 1; X !-> 1)) in G.
+  unfold p4 in G.
+  inversion G; subst.
+  inversion H2; subst.
+  simpl in H5. inversion H5; subst.
+  simpl in H6. 
+  assert (G'' : (Z !-> 1; X !-> 0; X !-> 1) Z <> (Z !-> 2; X !-> 0; Z !-> 1; X !-> 1) Z). { 
+    unfold not. intros. rewrite t_update_eq in H0. rewrite t_update_eq in H0. discriminate H0.  }
+  assert (Gcontra: (Z !-> 1; X !-> 0; X !-> 1) Z = (Z !-> 2; X !-> 0; Z !-> 1; X !-> 1) Z). {
+    rewrite H6. reflexivity. }
+  apply G'' in Gcontra. assumption.
+ (* FILL IN HERE *) Qed.
 (** [] *)
 
 (** **** Exercise: 5 stars, advanced, optional (p5_p6_equiv)
@@ -2008,8 +2048,10 @@ Definition p5 : com :=
 Definition p6 : com :=
   <{ X := 1 }>.
 
+
 Theorem p5_p6_equiv : cequiv p5 p6.
-Proof. (* FILL IN HERE *) Admitted.
+Proof.
+ (* FILL IN HERE *) Admitted.
 (** [] *)
 
 End Himp.

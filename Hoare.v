@@ -737,8 +737,13 @@ Proof.
   intros.
   unfold valid_hoare_triple.
   intros.
-  
-  (* FILL IN HERE *) Admitted.
+  inversion H; subst.
+  destruct H0 as [H1 H2].
+  split.
+  - rewrite t_update_shadow. rewrite <- H2. rewrite t_update_same. assumption.
+  - rewrite t_update_eq. rewrite t_update_shadow. rewrite <- H2. rewrite t_update_same.
+    reflexivity.
+  (* FILL IN HERE *) Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, advanced, optional (hoare_asgn_fwd_exists)
@@ -761,7 +766,16 @@ Theorem hoare_asgn_fwd_exists :
   {{fun st => exists m, P (X !-> m ; st) /\
                 st X = aeval (X !-> m ; st) a }}.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  unfold valid_hoare_triple.
+  intros.
+  inversion H; subst.
+  exists (st X).
+  split.
+  - rewrite t_update_shadow. rewrite t_update_same.
+    assumption.
+  - rewrite t_update_eq. rewrite t_update_shadow. rewrite t_update_same.
+    reflexivity.
+  (* FILL IN HERE *) Qed.
 (** [] *)
 
 (* ================================================================= *)
@@ -2174,8 +2188,8 @@ Proof.
   - unfold "->>". unfold havoc_pre.
     intros st HP n.
     exists (st X). unfold assertion_sub. simpl. rewrite t_update_shadow.
-    
-(* FILL IN HERE *) Admitted.
+    rewrite t_update_same. assumption.
+(* FILL IN HERE *) Qed.
 
 (** [] *)
 
@@ -2314,7 +2328,23 @@ Notation "{{ P }}  c  {{ Q }}" :=
 Theorem assert_assume_differ : exists (P:Assertion) b (Q:Assertion),
        ({{P}} assume b {{Q}})
   /\ ~ ({{P}} assert b {{Q}}).
-(* FILL IN HERE *) Admitted.
+Proof.
+  exists (X=2)%assertion.
+  exists <{ X = 1 }>.
+  exists (False)%assertion.
+  split.
+  - unfold valid_hoare_triple. intros. inversion H; subst.
+    exists st. simpl. split.
+    + reflexivity.
+    + simpl in H2. simpl in H0. rewrite H0 in H2. simpl in H2.
+      discriminate H2.
+  - unfold not. unfold valid_hoare_triple. intros.
+    assert (G: (X !-> 2) =[ assert (X = 1) ]=> RError). {
+      apply E_AssertFalse. simpl. reflexivity. }
+    apply (H (X !-> 2) RError) in G.
+    + simpl in G. destruct G as [st' [H1 H2]]. assumption.
+    + simpl. rewrite t_update_eq. reflexivity.
+(* FILL IN HERE *) Qed.
 
 (** Then prove that any triple for an [assert] also works when
     [assert] is replaced by [assume]. *)
@@ -2323,7 +2353,11 @@ Theorem assert_implies_assume : forall P b Q,
      ({{P}} assert b {{Q}})
   -> ({{P}} assume b {{Q}}).
 Proof.
-(* FILL IN HERE *) Admitted.
+  unfold valid_hoare_triple.
+  intros.
+  apply (H st r); try assumption.
+  inversion H0; subst. apply E_AssertTrue; assumption.
+(* FILL IN HERE *) Qed.
 
 (** Next, here are proofs for the old hoare rules adapted to the new
     semantics.  You don't need to do anything with these. *)
@@ -2456,7 +2490,17 @@ Example assert_assume_example:
     assert (X = 2)
   {{True}}.
 Proof.
-(* FILL IN HERE *) Admitted.
+  unfold valid_hoare_triple. intros.
+  inversion H; subst.
+  - inversion H6; subst.
+    + exists st'0. inversion H8; subst.
+      * split; try reflexivity.
+      * split; try reflexivity.  inversion H4; subst. inversion H3; subst.
+        simpl in H2. simpl in H9. rewrite eqb_eq in H9. rewrite H9 in H2.
+        simpl in H2. discriminate H2.
+    + inversion H7; subst.
+  - inversion H5; subst. 
+(* FILL IN HERE *) Qed.
 
 End HoareAssertAssume.
 (** [] *)

@@ -409,7 +409,8 @@ Proof. eauto. Qed.
 Lemma wp_seq : forall P Q c1 c2,
     derivable P c1 (wp c2 Q) -> derivable (wp c2 Q) c2 Q -> derivable P <{c1; c2}> Q.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. eapply H_Seq with (Q := (wp c2 Q)); try assumption.
+  (* FILL IN HERE *) Qed.
 
 (** [] *)
 
@@ -484,7 +485,15 @@ Proof.
   - eapply H_If.
     + eapply IHc1. intros. eapply HT.
       * eapply E_IfTrue.
-  (* FILL IN HERE *) Admitted.
+        -- destruct H0. apply b0.
+        -- assumption.
+      * destruct H0. assumption.
+    + eapply IHc2. intros. eapply HT.
+      * eapply E_IfFalse.
+        -- destruct H0. unfold bassertion in n. apply Bool.not_true_is_false in n. apply n.
+        -- assumption.
+      * destruct H0. assumption.
+  (* FILL IN HERE *) Qed.
 
 (** [] *)
 
